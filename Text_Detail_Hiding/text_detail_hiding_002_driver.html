@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Inline “read-more” demo</title>
+<style>
+/* Keep the whole widget inline so it flows like normal prose */
+.inline-details { display:inline;  }
+
+/* Make the <summary> look like plain text */
+.inline-details summary {
+  display:inline;
+  cursor:pointer;
+  /* Remove the default ►▾ marker */
+}
+.inline-details summary::-webkit-details-marker,
+.inline-details summary::marker { display:none; }
+
+/* Add our own subtle cue */
+.inline-details summary::after {
+  content:" [more]";
+  font-weight:bold;
+  font-size:0.9em;
+  color:#004a9f;
+}
+/* Switch the cue when open */
+.inline-details[open] summary::after { content:" [less]"; }
+
+/* Hide the extra span while closed, reveal when open */
+.inline-details > span           { display:none; }
+.inline-details[open] > span     { display:inline; }
+</style>
+</head>
+
+<body>
+
+<p>
+  Machine learning models often improve as we feed them more data,
+  but there is a point of diminishing returns
+  <details class="inline-details">
+    <summary>for most practical applications</summary>
+    <span>,
+      especially when the additional examples are highly redundant
+      or noisy. In those cases it is usually more effective to
+      enrich the signal—by adding diverse edge-cases, better labels,
+      or domain-specific features—than to keep scaling volume alone.
+    </span>
+  </details>,
+  so data-centric approaches focus on quality rather than quantity.
+</p>
+
+</body>
+</html>
+

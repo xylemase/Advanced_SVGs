@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Gear-train layout</title>
+<style>
+  svg  { background:#fafafa; }
+  .gear  { fill:#f5f5f5; stroke:#333; stroke-width:1.5; }
+  .pivot { fill:#c33; }
+</style>
+
+<body>
+<!-- —————  SVG container ————— -->
+<svg id="diagram" width="560" height="420"
+     viewBox="-150 -180 300 360"
+     xmlns="http://www.w3.org/2000/svg">
+</svg>
+
+<!-- —————  SCRIPT now lives **after** the SVG ————— -->
+<script>
+(function () {
+/* 1. BASIC GEAR DATA */
+var module = 4;
+var z1 = 24, z2 = 24, z3 = 12;
+var r1 = module*z1/2, r2 = r1, r3 = module*z3/2;
+var c1 = {x:0,         y:0          };
+var c2 = {x:r1+r2,     y:0          };
+var c3 = {x:0,         y:-(r1+r3)   };
+
+/* 2. HELPERS */
+var svg = document.getElementById('diagram');        // <— change here
+var NS  = 'http://www.w3.org/2000/svg';
+
+function gearPath(z, m, toothFill, addMult, dedMult){
+  toothFill = toothFill==null?0.4:toothFill;
+  addMult   = addMult==null?1.0  :addMult;
+  dedMult   = dedMult==null?1.25 :dedMult;
+
+  var rP=m*z/2, rA=rP+addMult*m, rD=rP-dedMult*m;
+  var pitchA=2*Math.PI/z, halfT=pitchA*toothFill/2, rootGap=pitchA-2*halfT;
+  var th=-Math.PI/2-halfT;
+  var d='M '+(rD*Math.cos(th)).toFixed(3)+','+(rD*Math.sin(th)).toFixed(3);
+  for(var i=0;i<z;i++){
+    var thMid=th+halfT, thEnd=thMid+halfT;
+    d+=' L '+(rA*Math.cos(thMid)).toFixed(3)+','+(rA*Math.sin(thMid)).toFixed(3);
+    d+=' L '+(rD*Math.cos(thEnd)).toFixed(3)+','+(rD*Math.sin(thEnd)).toFixed(3);
+    th=thEnd+rootGap;
+    d+=' A '+rD.toFixed(3)+','+rD.toFixed(3)+' 0 0 1 '+
+        (rD*Math.cos(th)).toFixed(3)+','+(rD*Math.sin(th)).toFixed(3);
+  }
+  return d+' Z';
+}
+
+function addGear(parent,id,z,m,cx,cy,rot){
+  var p=document.createElementNS(NS,'path');
+  p.setAttribute('class','gear'); p.setAttribute('id',id);
+  p.setAttribute('d',gearPath(z,m));
+  p.setAttribute('transform',
+      'translate('+cx+','+cy+') rotate('+(rot||0)+')');
+  parent.appendChild(p);
+}
+
+function dot(pt){
+  var c=document.createElementNS(NS,'circle');
+  c.setAttribute('class','pivot'); c.setAttribute('cx',pt.x);
+  c.setAttribute('cy',pt.y); c.setAttribute('r',3); svg.appendChild(c);
+}
+
+/* 3. BUILD GEARS */
+var plate=document.createElementNS(NS,'g');
+plate.setAttribute('id','plate'); svg.appendChild(plate);
+
+addGear(plate,'gear1',z1,module,c1.x,c1.y);              // driver
+addGear(plate,'gear3',z3,module,c3.x,c3.y,180/z3);       // idler on rocker
+addGear(svg, 'gear2',z2,module,c2.x,c2.y,180/z2);        // fixed gear
+
+dot(c1); dot(c2); dot(c3);                               // centre dots
+})();
+</script>
+</body>
+</html>

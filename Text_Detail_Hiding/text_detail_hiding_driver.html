@@ -1,0 +1,50 @@
+<html>
+    <head>
+        <title>Detail-Hiding Example in SVG</title>
+    </head>
+    <body>
+<!-- Inline SVG (could also be inside <object src="diagram.svg">) -->
+<svg id="diagram" viewBox="0 0 400 200" role="img" aria-labelledby="title">
+  <title id="title">System Overview</title>
+
+  <!-- Always-visible layer -->
+  <g id="base">
+    <rect x="20" y="60" width="160" height="80" rx="8"
+          fill="#e4e4e4" stroke="#666"/>
+    <text x="100" y="110" text-anchor="middle" font-family="sans-serif">
+      High-level view
+    </text>
+  </g>
+
+  <!-- Detail layer we’ll hide/show -->
+  <g id="details" class="hidden" aria-hidden="true">
+    <line x1="200" y1="60" x2="380" y2="60" stroke="#c33" stroke-width="2"/>
+    <line x1="200" y1="80" x2="380" y2="80" stroke="#c33" stroke-width="2"/>
+    <text x="290" y="75" text-anchor="middle" fill="#c33"
+          font-size="12" font-family="monospace">
+      Registers, flags, micro-ops …
+    </text>
+  </g>
+</svg>
+
+<button id="toggle">Show details</button>
+
+<style>
+/* The magic: hide the layer when .hidden is present */
+.hidden { display: none; }
+button { margin-top: .6em; }
+</style>
+
+<script>
+const btn     = document.getElementById('toggle');
+const details = document.getElementById('details');
+
+btn.addEventListener('click', () => {
+  const nowHidden = details.classList.toggle('hidden');
+  details.setAttribute('aria-hidden', nowHidden);
+  btn.textContent  = nowHidden ? 'Show details' : 'Hide details';
+});
+</script>
+    </body>
+</html>
+

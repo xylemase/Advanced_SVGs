@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Animated 3-Gear Rocker</title>
+<style>
+  svg      { background:#fafafa; }
+  .gear    { fill:#f5f5f5; stroke:#333; stroke-width:1.4; }
+  .pivot   { fill:#c33; }
+</style>
+
+<body>
+<svg id="diagram" width="560" height="420"
+     viewBox="-150 -180 300 360"
+     xmlns="http://www.w3.org/2000/svg">
+</svg>
+
+<script>
+(function () {
+
+/* ───────────────── 1.  BASIC DIMENSIONS ───────────────── */
+var module = 4;                 // px per tooth
+var z1 = 24,  z2 = 24,  z3 = 12;
+var r1 = module*z1/2,  r2 = r1,  r3 = module*z3/2;
+
+var c1 = {x: 0,         y: 0          };          // Gear-1 centre
+var c2 = {x: r1+r2,     y: 0          };          // Gear-2 centre
+var c3 = {x: 0,         y: -(r1+r3)   };          // Gear-3 centre
+
+var svg = document.getElementById('diagram');
+var NS  = 'http://www.w3.org/2000/svg';
+
+/* ───────────────── 2.  GEAR SHAPE GENERATOR ───────────── */
+function gearPath(z, m, toothFill, addMult, dedMult) {
+  toothFill = (toothFill == null) ? 0.4  : toothFill;   // 0 … 1
+  addMult   = (addMult   == null) ? 1.0  : addMult;     // addendum × m
+  dedMult   = (dedMult   == null) ? 1.25 : dedMult;     // dedendum × m
+
+  var rP = m*z/2;                 // pitch radius
+  var rA = rP + addMult*m;        // outer radius
+  var rD = rP - dedMult*m;        // root  radius
+
+  var pitchA   = 2*Math.PI / z;
+  var halfT    = pitchA * toothFill / 2;
+  var rootGap  = pitchA - 2*halfT;
+
+  var th = -Math.PI/2 - halfT;    // start half a gap before 12 o’clock
+  var d  = 'M ' + (rD*Math.cos(th)).toFixed(3) + ',' +
+                     (rD*Math.sin(th)).toFixed(3);
+
+  for (var i = 0; i < z; i++) {
+    var thMid = th + halfT;
+    var thEnd = thMid + halfT;
+
+    d += ' L ' + (rA*Math.cos(thMid)).toFixed(3) + ',' +
+                 (rA*Math.sin(thMid)).toFixed(3);
+    d += ' L ' + (rD*Math.cos(thEnd)).toFixed(3) + ',' +
+                 (rD*Math.sin(thEnd)).toFixed(3);
+
+    th = thEnd + rootGap;         // next gap start
+    d += ' A ' + rD.toFixed(3) + ',' + rD.toFixed(3) + ' 0 0 1 ' +
+         (rD*Math.cos(th)).toFixed(3) + ',' + (rD*Math.sin(th)).toFixed(3);
+  }
+  return d + ' Z';
+}
+
+/* ─────────────── 3.  SMALL HELPERS  ───────────────────── */
+function makeSpin(toDeg){
+  var a = document.createElementNS(NS,'animateTransform');
+  a.setAttribute('attributeName','transform');
+  a.setAttribute('type','rotate');
+  a.setAttribute('from','0');
+  a.setAttribute('to', String(toDeg));
+  a.setAttribute('dur','8s');
+  a.setAttribute('repeatCount','indefinite');
+  a.setAttribute('additive','sum');
+  return a;
+}
+
+var spinCW  = makeSpin( 360);      // +360° in 8 s
+var spinCCW = makeSpin(-360);      // −360° in 8 s
+
+function addGear(parentGroup, id, z, cx, cy, initialDeg, spinAnim) {
+  /* outer <g> holds POSITION; inner <path> holds ROTATION */
+  var g = document.createElementNS(NS,'g');
+  g.setAttribute('transform','translate('+cx+','+cy+')');
+  parentGroup.appendChild(g);
+
+  var p = document.createElementNS(NS,'path');
+  p.setAttribute('d', gearPath(z, module));
+  p.setAttribute('class','gear');
+  p.setAttribute('id', id);
+  p.setAttribute('transform','rotate('+ (initialDeg||0) +')');
+  if (spinAnim) p.appendChild( spinAnim.cloneNode(true) );
+  g.appendChild(p);
+  return p;            // return <path> (so we can add more animations)
+}
+
+function dot(pt) {
+  var c = document.createElementNS(NS,'circle');
+  c.setAttribute('class','pivot');
+  c.setAttribute('cx',pt.x); c.setAttribute('cy',pt.y);
+  c.setAttribute('r',3); svg.appendChild(c);
+}
+var pivotX = (c1.x + c3.x) / 2;          //  0
+var pivotY = (c1.y + c3.y) / 2;          // -((r1+r3)/2)
+
+/* ─────────────── 4.  BUILD THE LAYOUT  ────────────────── */
+var plate = document.createElementNS(NS,'g');
+plate.setAttribute('id','plate');
+svg.appendChild(plate);
+
+/* Gear-1 (driver) : clockwise 360°/8 s */
+addGear(plate,'gear1', z1, c1.x, c1.y, 0, spinCW);
+
+/* Gear-3 (idler) : counter-rotates 720°/8 s (= −2 × Gear-1) */
+addGear(plate,'gear3', z3, c3.x, c3.y, 180/z3, makeSpin(-720));
+
+/* Gear-2 : CCW for first 3 s, then CW forever */
+var g2 = addGear(svg,'gear2', z2, c2.x, c2.y, 180/z2, spinCCW);
+
+spinCCW.setAttribute('id','g2CCW');
+
+spinCCW.setAttribute('dur','3s');                // <── NEW
+
+spinCCW.setAttribute('repeatCount','1');   // run only once
+spinCCW.setAttribute('fill','freeze');     // …and stay still afterward
+
+var g2Phase2 = spinCW.cloneNode(true);
+// g2Phase2.setAttribute('begin','plateShift.end+0.1s');  starts after pivot 
+g2Phase2.setAttribute('begin','g2CCW.end+0.1s');   // <── change here
+g2.appendChild(g2Phase2);
+
+/* Rocker-plate pivot 0 → -15° (clockwise) after 3 s */
+var pivot = document.createElementNS(NS,'animateTransform');
+pivot.setAttribute('id','plateShift');
+pivot.setAttribute('attributeName','transform');
+pivot.setAttribute('type','rotate');
+pivot.setAttribute('from','0 '  +pivotX+' '+pivotY);
+pivot.setAttribute('to',  '80 '+pivotX+' '+pivotY);   //  adjust angle to taste
+pivot.setAttribute('begin','3s');
+pivot.setAttribute('dur','0.6s');
+pivot.setAttribute('fill','freeze');     // stay in the swung-out position
+pivot.setAttribute('additive','sum');    // combine with future tweaks
+plate.appendChild(pivot);
+
+/* (optional) red centre dots */
+dot(c1); dot(c2); dot(c3);
+
+})();
+
+</script>
+</body>
+</html>
+
